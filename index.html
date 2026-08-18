@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FastAPI + Database — Full Stack Study Tracker</title>
+<style>
+  :root{
+    --bg: #0B1220;
+    --panel: #10192E;
+    --panel-2: #0E1626;
+    --line: #1F2C46;
+    --text: #E7ECF5;
+    --text-dim: #8C9BB8;
+    --text-faint: #5A6A88;
+    --teal: #16B8A6;
+    --green: #47A248;
+    --blue: #4C8DFF;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.5;
+    padding: 32px 16px 80px;
+  }
+  .wrap{max-width: 760px; margin: 0 auto;}
+
+  header{margin-bottom: 22px;}
+  .eyebrow{
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    margin: 0 0 10px;
+  }
+  .eyebrow .dot{color: var(--teal);}
+  .eyebrow .dot2{color: var(--green);}
+  .eyebrow .dot3{color: var(--blue);}
+  h1{
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  h1 .accent{color: var(--teal);}
+  h1 .accent2{color: var(--green);}
+  h1 .accent3{color: var(--blue);}
+  .sub{color: var(--text-dim); font-size: 14px; margin: 0 0 18px;}
+
+  .mode-select{
+    margin-bottom: 18px;
+  }
+  .mode-label{
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin: 0 0 8px;
+  }
+  .mode-pills{
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .mode-pill{
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text-dim);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .mode-pill:hover{ border-color: var(--text-faint); color: var(--text); }
+  .mode-pill .sw{
+    width: 8px; height: 8px; border-radius: 50%;
+    display: inline-block;
+    background: var(--text-faint);
+    flex-shrink: 0;
+  }
+  .mode-pill[data-mode="mongo"] .sw{ background: var(--green); }
+  .mode-pill[data-mode="pg"] .sw{ background: var(--blue); }
+  .mode-pill[data-mode="both"] .sw{
+    background: linear-gradient(90deg, var(--green) 50%, var(--blue) 50%);
+  }
+  .mode-pill.active{
+    color: var(--text);
+    border-color: var(--text-faint);
+    background: var(--panel-2);
+  }
+  .mode-pill.active[data-mode="mongo"]{ border-color: var(--green); }
+  .mode-pill.active[data-mode="pg"]{ border-color: var(--blue); }
+  .mode-pill.active[data-mode="both"]{ border-color: var(--teal); }
+
+  .progress-card{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .progress-top{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom: 10px; flex-wrap: wrap; gap: 6px;
+  }
+  .progress-label{font-family: var(--mono); font-size: 12px; color: var(--text-dim);}
+  .progress-num{font-family: var(--mono); font-size: 13px; color: var(--text);}
+  .progress-num b{color: var(--teal); font-weight: 700;}
+  .bar-track{
+    height: 8px; border-radius: 4px; background: var(--panel-2);
+    overflow: hidden; border: 1px solid var(--line);
+  }
+  .bar-fill{
+    height: 100%; border-radius: 4px;
+    background: linear-gradient(90deg, var(--teal), var(--green), var(--blue));
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+  .stage-track{
+    display:flex; gap: 3px; margin-top: 12px;
+  }
+  .stage-seg{
+    flex:1; height: 4px; border-radius: 2px; background: var(--panel-2);
+    border: 1px solid var(--line);
+  }
+  .stage-seg.done{ background: var(--teal); border-color: var(--teal); }
+
+  .toolbar{
+    display:flex; justify-content: flex-end; gap: 10px; margin: 14px 0 8px;
+  }
+  button.tool{
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--text-dim);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  button.tool:hover{ color: var(--text); border-color: var(--text-faint); }
+
+  section.stage{
+    margin-top: 22px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+    overflow: hidden;
+  }
+  section.stage.hidden{ display: none; }
+  .stage-head{
+    display:flex; align-items:center; justify-content: space-between;
+    padding: 14px 16px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .stage-head-left{display:flex; align-items:center; gap: 10px;}
+  .stage-idx{
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--bg);
+    background: var(--text-faint);
+    border-radius: 4px;
+    width: 22px; height: 22px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink: 0;
+  }
+  .stage-idx.mongo{ background: var(--green); }
+  .stage-idx.fast{ background: var(--teal); }
+  .stage-idx.pg{ background: var(--blue); }
+  .stage-title{font-size: 15px; font-weight: 600;}
+  .stage-count{
+    font-family: var(--mono); font-size: 12px; color: var(--text-faint);
+  }
+  .stage-count.complete{ color: var(--teal); }
+  .chev{ color: var(--text-faint); font-size: 12px; transition: transform 0.2s ease; }
+  .stage.open .chev{ transform: rotate(90deg); }
+
+  .stage-body{
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+    border-top: 1px solid transparent;
+  }
+  .stage.open .stage-body{ border-top: 1px solid var(--line); }
+
+  ul.items{ list-style: none; margin:0; padding: 6px 8px 10px; }
+  li.item{
+    display:flex; align-items: flex-start; gap: 10px;
+    padding: 8px 8px;
+    border-radius: 6px;
+    font-size: 13.5px;
+  }
+  li.item:hover{ background: var(--panel-2); }
+  li.item input[type=checkbox]{
+    appearance: none;
+    -webkit-appearance: none;
+    width: 17px; height: 17px;
+    border-radius: 4px;
+    border: 1.5px solid var(--text-faint);
+    background: transparent;
+    margin-top: 2px;
+    flex-shrink: 0;
+    cursor: pointer;
+    position: relative;
+  }
+  li.item input[type=checkbox]:checked{
+    background: var(--teal);
+    border-color: var(--teal);
+  }
+  li.item input[type=checkbox]:checked::after{
+    content: '';
+    position: absolute;
+    left: 5px; top: 1px;
+    width: 4px; height: 8px;
+    border: solid var(--bg);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  li.item label{ cursor: pointer; color: var(--text); }
+  li.item.checked label{ color: var(--text-faint); text-decoration: line-through; }
+
+  footer{
+    margin-top: 30px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+
+  .save-toast{
+    position: fixed;
+    bottom: 20px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--panel);
+    border: 1px solid var(--teal);
+    color: var(--text);
+    font-size: 12px;
+    font-family: var(--mono);
+    padding: 8px 14px;
+    border-radius: 6px;
+    opacity: 0;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
+  }
+  .save-toast.show{ opacity: 1; transform: translateX(-50%) translateY(0); }
+  .save-toast.err{ border-color: #E24B4A; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow"><span class="dot">●</span> fastapi <span class="dot2">●</span> mongodb <span class="dot3">●</span> postgresql — study tracker</p>
+    <h1 id="main-title">Full Stack <span class="accent">FastAPI</span> + <span class="accent2">MongoDB</span></h1>
+    <p class="sub">Beginner to industry-ready. Pick your stack below — progress saves to this browser automatically.</p>
+
+    <div class="mode-select">
+      <p class="mode-label">choose your stack</p>
+      <div class="mode-pills" id="mode-pills">
+        <div class="mode-pill" data-mode="mongo"><span class="sw"></span>FastAPI + MongoDB</div>
+        <div class="mode-pill" data-mode="pg"><span class="sw"></span>FastAPI + PostgreSQL</div>
+        <div class="mode-pill" data-mode="both"><span class="sw"></span>Both / compare</div>
+      </div>
+    </div>
+
+    <div class="progress-card">
+      <div class="progress-top">
+        <span class="progress-label">OVERALL PROGRESS</span>
+        <span class="progress-num" id="progress-num"><b>0</b> / 0 items · 0%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="bar-fill"></div></div>
+      <div class="stage-track" id="stage-track"></div>
+    </div>
+
+    <div class="toolbar">
+      <button class="tool" id="expand-all">Expand all</button>
+      <button class="tool" id="collapse-all">Collapse all</button>
+      <button class="tool" id="reset-all">Reset progress</button>
+    </div>
+  </header>
+
+  <main id="stages"></main>
+
+  <footer>saved to localStorage in this browser · clearing browser data will erase progress</footer>
+</div>
+
+<div class="save-toast" id="toast">Progress saved</div>
+
+<script>
+const DATA = [
+  { title: "Prerequisites", type: "fast", items: [
+    "Python: variables, control flow, functions, data structures",
+    "Python OOP: classes, inheritance, decorators",
+    "Type hints (typing module)",
+    "async/await and the event loop (asyncio basics)",
+    "Exception handling and context managers",
+    "HTTP fundamentals: methods, status codes, headers",
+    "REST API principles",
+    "JSON structure and serialization",
+    "Git and GitHub workflow",
+    "Terminal / command line basics",
+    "Postman or curl for testing APIs",
+    "Basic Docker concepts (containers vs images)",
+    "Database fundamentals: SQL vs NoSQL, CRUD concepts"
+  ]},
+  { title: "Beginner — FastAPI Core", type: "fast", items: [
+    "Install FastAPI + Uvicorn, run hello world",
+    "Path parameters and query parameters",
+    "Request body with Pydantic models",
+    "Response models and response_model",
+    "Path operation decorators (@app.get, @app.post, etc.)",
+    "Status codes and HTTPException",
+    "Swagger UI (/docs) and ReDoc (/redoc)",
+    "Optional fields, defaults, Enum types",
+    "Form data and file uploads (UploadFile)",
+    "Basic project structure (routers, main.py)"
+  ]},
+  { title: "Beginner — MongoDB Core", type: "mongo", items: [
+    "Install MongoDB locally or set up Atlas",
+    "Documents, collections, databases",
+    "BSON vs JSON",
+    "CRUD via mongosh (insertOne, find, updateOne, deleteOne)",
+    "Query operators ($eq, $gt, $in, $and, $or)",
+    "Indexes — why they matter, creating a basic index",
+    "Schema design: embedding vs referencing",
+    "ObjectId and how MongoDB generates IDs"
+  ]},
+  { title: "Beginner — PostgreSQL Core", type: "pg", items: [
+    "Install PostgreSQL locally or use a managed service (Supabase, Neon, RDS)",
+    "Relational model: tables, rows, columns, schemas",
+    "Data types (INTEGER, VARCHAR, TEXT, BOOLEAN, TIMESTAMP, JSONB)",
+    "Primary keys, foreign keys, constraints",
+    "CRUD via psql (INSERT, SELECT, UPDATE, DELETE)",
+    "Filtering, ORDER BY, LIMIT, WHERE clauses",
+    "JOINs (INNER, LEFT, RIGHT, FULL)",
+    "Indexes and why they matter",
+    "Normalization basics (1NF, 2NF, 3NF)"
+  ]},
+  { title: "Intermediate — Connecting FastAPI to MongoDB", type: "mongo", items: [
+    "Async driver: Motor",
+    "ODM option: Beanie (Motor + Pydantic)",
+    "Alternative: raw PyMongo (sync) for comparison",
+    "Environment variables and .env management",
+    "Connection lifecycle: lifespan context manager",
+    "Mapping Pydantic models to MongoDB documents",
+    "Handling ObjectId serialization in Pydantic",
+    "Full CRUD API on a MongoDB collection",
+    "Pagination (skip/limit) and sorting",
+    "Filtering and search endpoints"
+  ]},
+  { title: "Intermediate — Connecting FastAPI to PostgreSQL", type: "pg", items: [
+    "ORM: SQLAlchemy (Core + ORM basics)",
+    "SQLModel — Pydantic + SQLAlchemy combined",
+    "Async driver: asyncpg",
+    "Database sessions and connection pooling",
+    "Alembic for schema migrations",
+    "Mapping Pydantic schemas to SQLAlchemy models",
+    "Full CRUD API on a PostgreSQL table",
+    "Relationships: one-to-many, many-to-many",
+    "Pagination and filtering with SQL queries",
+    "Transactions and rollback handling"
+  ]},
+  { title: "Intermediate — FastAPI Deep Dive", type: "fast", items: [
+    "Dependency Injection (Depends())",
+    "Shared dependencies (DB connections, current user)",
+    "APIRouter for modular route organization",
+    "Middleware (custom + CORS)",
+    "Background tasks (BackgroundTasks)",
+    "Custom global exception handlers",
+    "Yield dependencies and request lifecycle",
+    "Settings management with pydantic-settings",
+    "Nested models and validators (field_validator, model_validator)",
+    "Scalable file structure (routers, services, models, core, db)"
+  ]},
+  { title: "Intermediate — Authentication & Security", type: "fast", items: [
+    "Password hashing (passlib/bcrypt)",
+    "OAuth2 password flow",
+    "JWT tokens: creation, verification, expiry",
+    "Storing users securely",
+    "Protected routes with Depends(get_current_user)",
+    "Role-based access control (RBAC)",
+    "Refresh tokens and revocation strategy",
+    "CORS configuration for frontend integration",
+    "Rate limiting (e.g. slowapi)",
+    "Input sanitization and injection prevention"
+  ]},
+  { title: "Full Stack — Frontend Integration", type: "fast", items: [
+    "Pick a frontend stack (React / Vue / Next.js)",
+    "Fetching data with fetch/axios",
+    "CORS between frontend and backend",
+    "Auth flow: JWT storage (httpOnly cookie vs localStorage)",
+    "Protected routes on frontend",
+    "Build a full CRUD app end-to-end",
+    "File/image upload flow",
+    "WebSockets with FastAPI",
+    "Optional: Server-Sent Events (SSE)"
+  ]},
+  { title: "Advanced — Testing & Quality", type: "fast", items: [
+    "pytest fundamentals",
+    "TestClient / httpx.AsyncClient for endpoint tests",
+    "Mocking the database layer / using a test DB",
+    "Fixtures for setup/teardown",
+    "Test coverage tools (pytest-cov)",
+    "Linting and formatting: ruff, black, isort",
+    "Type checking with mypy",
+    "Pre-commit hooks"
+  ]},
+  { title: "Advanced — MongoDB Mastery", type: "mongo", items: [
+    "Aggregation pipeline ($match, $group, $lookup, $unwind)",
+    "Multi-document transactions",
+    "Advanced indexing (compound, text, geospatial)",
+    "Query performance analysis (explain())",
+    "Data modeling patterns (bucket, polymorphic, versioning)",
+    "Replication and sharding concepts",
+    "Backup and restore strategies"
+  ]},
+  { title: "Advanced — PostgreSQL Mastery", type: "pg", items: [
+    "Query optimization with EXPLAIN ANALYZE",
+    "Window functions and CTEs (WITH queries)",
+    "Advanced indexing (B-tree, GIN, GiST, partial indexes)",
+    "Transactions, isolation levels, locking",
+    "Materialized views",
+    "Partitioning large tables",
+    "Connection pooling in production (PgBouncer)",
+    "Backup and restore (pg_dump, pg_restore)"
+  ]},
+  { title: "Advanced — Architecture & Scalability", type: "fast", items: [
+    "Layered architecture: routers → services → repositories",
+    "Repository pattern for testability",
+    "Caching with Redis",
+    "Background job queues (Celery / arq / RQ)",
+    "Rate limiting and throttling at scale",
+    "API versioning strategies",
+    "Cursor-based pagination for large collections",
+    "Microservices vs monolith trade-offs",
+    "Message brokers basics (RabbitMQ / Kafka)",
+    "Optional: GraphQL with Strawberry"
+  ]},
+  { title: "Advanced — DevOps & Deployment", type: "fast", items: [
+    "Dockerizing a FastAPI app (multi-stage builds)",
+    "Docker Compose: FastAPI + database + Redis",
+    "Environment-specific configs (dev/staging/prod)",
+    "CI/CD pipeline with GitHub Actions",
+    "Deploying to cloud (Render/Railway/AWS/GCP)",
+    "Managed database setup (Atlas / RDS / Neon)",
+    "Reverse proxy: Nginx + Gunicorn/Uvicorn workers",
+    "HTTPS/SSL setup",
+    "Structured logging",
+    "Monitoring: Prometheus/Grafana or Sentry",
+    "Health check endpoints",
+    "Horizontal scaling and load balancing basics"
+  ]},
+  { title: "Industry-Ready — Professional Practices", type: "fast", items: [
+    "Clean OpenAPI documentation (tags, descriptions)",
+    "Semantic versioning and changelogs",
+    "Proper README and setup docs",
+    "Code review etiquette and PR discipline",
+    "API-first / contract-first design",
+    "Proper secrets handling in production",
+    "System design interview prep",
+    "Database trade-off fluency (relational vs document)",
+    "2-3 portfolio-worthy full stack projects",
+    "Contribute to an open-source project"
+  ]}
+];
+
+const STORAGE_KEY_STATE = 'fastapi-db-checklist:state';
+const STORAGE_KEY_MODE = 'fastapi-db-checklist:mode';
+
+const wrap = document.getElementById('stages');
+const allIds = [];
+const stageEls = [];
+
+DATA.forEach((stage, sIdx) => {
+  const section = document.createElement('section');
+  section.className = 'stage';
+  section.dataset.stage = sIdx;
+  section.dataset.type = stage.type;
+
+  const head = document.createElement('div');
+  head.className = 'stage-head';
+  head.innerHTML = `
+    <div class="stage-head-left">
+      <span class="stage-idx ${stage.type}">${sIdx+1}</span>
+      <span class="stage-title">${stage.title}</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span class="stage-count" data-stage-count="${sIdx}">0/${stage.items.length}</span>
+      <span class="chev">&#9656;</span>
+    </div>
+  `;
+  section.appendChild(head);
+
+  const body = document.createElement('div');
+  body.className = 'stage-body';
+  const ul = document.createElement('ul');
+  ul.className = 'items';
+
+  stage.items.forEach((text, iIdx) => {
+    const id = `s${sIdx}-i${iIdx}`;
+    allIds.push(id);
+    const li = document.createElement('li');
+    li.className = 'item';
+    li.dataset.id = id;
+    li.innerHTML = `
+      <input type="checkbox" id="${id}">
+      <label for="${id}">${text}</label>
+    `;
+    ul.appendChild(li);
+  });
+
+  body.appendChild(ul);
+  section.appendChild(body);
+  wrap.appendChild(section);
+  stageEls.push(section);
+
+  head.addEventListener('click', () => {
+    section.classList.toggle('open');
+    body.style.maxHeight = section.classList.contains('open') ? body.scrollHeight + 'px' : '0';
+  });
+});
+
+let checkedSet = new Set();
+let currentMode = 'mongo';
+let saveTimer = null;
+let storageAvailable = true;
+
+function hasLocalStorage(){
+  try{
+    const testKey = '__ls_test__';
+    window.localStorage.setItem(testKey, '1');
+    window.localStorage.removeItem(testKey);
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+function showToast(msg, isErr){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('err', !!isErr);
+  t.classList.add('show');
+  clearTimeout(t._hideTimer);
+  t._hideTimer = setTimeout(() => t.classList.remove('show'), isErr ? 2400 : 1200);
+}
+
+function visibleStageIndexes(){
+  return DATA.map((s, i) => i).filter(i => DATA[i].type === 'fast' || DATA[i].type === currentMode || currentMode === 'both');
+}
+
+function applyMode(){
+  document.querySelectorAll('.mode-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.mode === currentMode);
+  });
+  stageEls.forEach((section, sIdx) => {
+    const type = DATA[sIdx].type;
+    const visible = type === 'fast' || type === currentMode || currentMode === 'both';
+    section.classList.toggle('hidden', !visible);
+  });
+
+  const titleEl = document.getElementById('main-title');
+  if(currentMode === 'mongo'){
+    titleEl.innerHTML = 'Full Stack <span class="accent">FastAPI</span> + <span class="accent2">MongoDB</span>';
+  }else if(currentMode === 'pg'){
+    titleEl.innerHTML = 'Full Stack <span class="accent">FastAPI</span> + <span class="accent3">PostgreSQL</span>';
+  }else{
+    titleEl.innerHTML = 'Full Stack <span class="accent">FastAPI</span> + <span class="accent2">MongoDB</span> + <span class="accent3">PostgreSQL</span>';
+  }
+
+  updateCounts();
+}
+
+function loadState(){
+  storageAvailable = hasLocalStorage();
+
+  if(storageAvailable){
+    try{
+      const rawState = window.localStorage.getItem(STORAGE_KEY_STATE);
+      if(rawState){
+        checkedSet = new Set(JSON.parse(rawState));
+      }
+    }catch(e){
+      checkedSet = new Set();
+    }
+    try{
+      const rawMode = window.localStorage.getItem(STORAGE_KEY_MODE);
+      if(rawMode){
+        currentMode = rawMode;
+      }
+    }catch(e){
+      currentMode = 'mongo';
+    }
+  }else{
+    showToast('localStorage unavailable — progress will not be saved', true);
+  }
+
+  applyState();
+  applyMode();
+}
+
+function applyState(){
+  allIds.forEach(id => {
+    const cb = document.getElementById(id);
+    if(!cb) return;
+    const li = cb.closest('li');
+    cb.checked = checkedSet.has(id);
+    li.classList.toggle('checked', cb.checked);
+  });
+  updateCounts();
+}
+
+function updateCounts(){
+  const visIdx = visibleStageIndexes();
+  let totalVisible = 0;
+  let doneVisible = 0;
+
+  const track = document.getElementById('stage-track');
+  track.innerHTML = '';
+
+  DATA.forEach((stage, sIdx) => {
+    const stageDone = stage.items.filter((_, iIdx) => checkedSet.has(`s${sIdx}-i${iIdx}`)).length;
+    const countEl = document.querySelector(`[data-stage-count="${sIdx}"]`);
+    if(countEl){
+      countEl.textContent = `${stageDone}/${stage.items.length}`;
+      countEl.classList.toggle('complete', stageDone === stage.items.length);
+    }
+    if(visIdx.includes(sIdx)){
+      totalVisible += stage.items.length;
+      doneVisible += stageDone;
+      const seg = document.createElement('div');
+      seg.className = 'stage-seg' + (stageDone === stage.items.length ? ' done' : '');
+      track.appendChild(seg);
+    }
+  });
+
+  const pct = totalVisible ? Math.round((doneVisible/totalVisible)*100) : 0;
+  document.getElementById('progress-num').innerHTML = `<b>${doneVisible}</b> / ${totalVisible} items \u00B7 ${pct}%`;
+  document.getElementById('bar-fill').style.width = pct + '%';
+}
+
+function persist(){
+  if(!storageAvailable) return;
+  try{
+    window.localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify(Array.from(checkedSet)));
+    showToast('Progress saved', false);
+  }catch(e){
+    showToast('Could not save — storage full or blocked', true);
+  }
+}
+
+function persistMode(){
+  if(!storageAvailable) return;
+  try{
+    window.localStorage.setItem(STORAGE_KEY_MODE, currentMode);
+  }catch(e){
+    showToast('Could not save — storage full or blocked', true);
+  }
+}
+
+wrap.addEventListener('change', (e) => {
+  if(e.target.type !== 'checkbox') return;
+  const li = e.target.closest('li');
+  const id = li.dataset.id;
+  if(e.target.checked){
+    checkedSet.add(id);
+    li.classList.add('checked');
+  }else{
+    checkedSet.delete(id);
+    li.classList.remove('checked');
+  }
+  updateCounts();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(persist, 300);
+});
+
+document.getElementById('mode-pills').addEventListener('click', (e) => {
+  const pill = e.target.closest('.mode-pill');
+  if(!pill) return;
+  currentMode = pill.dataset.mode;
+  applyMode();
+  persistMode();
+});
+
+document.getElementById('expand-all').addEventListener('click', () => {
+  stageEls.forEach(s => {
+    if(s.classList.contains('hidden')) return;
+    s.classList.add('open');
+    const body = s.querySelector('.stage-body');
+    body.style.maxHeight = body.scrollHeight + 'px';
+  });
+});
+
+document.getElementById('collapse-all').addEventListener('click', () => {
+  stageEls.forEach(s => {
+    s.classList.remove('open');
+    s.querySelector('.stage-body').style.maxHeight = '0';
+  });
+});
+
+document.getElementById('reset-all').addEventListener('click', () => {
+  if(!confirm('Reset all checked items? This cannot be undone.')) return;
+  checkedSet = new Set();
+  applyState();
+  persist();
+});
+
+loadState();
+</script>
+</body>
+</html>
