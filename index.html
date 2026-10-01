@@ -188,12 +188,10 @@
   .stage.open .chev{ transform: rotate(90deg); }
 
   .stage-body{
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.25s ease;
+    display: none;
     border-top: 1px solid transparent;
   }
-  .stage.open .stage-body{ border-top: 1px solid var(--line); }
+  .stage.open .stage-body{ display:block; border-top: 1px solid var(--line); }
 
   ul.items{ list-style: none; margin:0; padding: 6px 8px 10px; }
   li.item{
@@ -256,6 +254,12 @@
   }
   .save-toast.show{ opacity: 1; transform: translateX(-50%) translateY(0); }
   .save-toast.err{ border-color: #E24B4A; }
+  .toolbar{flex-wrap:wrap;}
+  .stage-head:focus-visible, li.item input[type=checkbox]:focus-visible, button.tool:focus-visible, .mode-pill:focus-visible{outline:2px solid var(--teal); outline-offset:2px;}
+  .hide-done li.item.checked{display:none;}
+  .next{margin:12px 0 0; font-size:13px; color:var(--text-dim);}
+  .next b{color:var(--text);}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important;} }
 </style>
 </head>
 <body>
@@ -282,11 +286,16 @@
       </div>
       <div class="bar-track"><div class="bar-fill" id="bar-fill"></div></div>
       <div class="stage-track" id="stage-track"></div>
+      <p class="next" id="next"></p>
     </div>
 
     <div class="toolbar">
       <button class="tool" id="expand-all">Expand all</button>
       <button class="tool" id="collapse-all">Collapse all</button>
+      <button class="tool" id="hide-done">Hide done</button>
+      <button class="tool" id="export">Export</button>
+      <button class="tool" id="import">Import</button>
+      <input type="file" id="import-file" accept="application/json" hidden>
       <button class="tool" id="reset-all">Reset progress</button>
     </div>
   </header>
@@ -313,7 +322,8 @@ const DATA = [
     "Terminal / command line basics",
     "Postman or curl for testing APIs",
     "Basic Docker concepts (containers vs images)",
-    "Database fundamentals: SQL vs NoSQL, CRUD concepts"
+    "Database fundamentals: SQL vs NoSQL, CRUD concepts",
+    "Python environments: venv or uv, pyproject.toml, pinned dependencies"
   ]},
   { title: "Beginner — FastAPI Core", type: "fast", items: [
     "Install FastAPI + Uvicorn, run hello world",
@@ -325,7 +335,10 @@ const DATA = [
     "Swagger UI (/docs) and ReDoc (/redoc)",
     "Optional fields, defaults, Enum types",
     "Form data and file uploads (UploadFile)",
-    "Basic project structure (routers, main.py)"
+    "Basic project structure (routers, main.py)",
+    "Pydantic v2 essentials: Field, validators, model_config, reading validation errors",
+    "Sync vs async endpoints: when each is right, and why blocking calls inside async def hurt",
+    "Build: notes API with full CRUD, tags and clean Swagger docs"
   ]},
   { title: "Beginner — MongoDB Core", type: "mongo", items: [
     "Install MongoDB locally or set up Atlas",
@@ -358,7 +371,8 @@ const DATA = [
     "Handling ObjectId serialization in Pydantic",
     "Full CRUD API on a MongoDB collection",
     "Pagination (skip/limit) and sorting",
-    "Filtering and search endpoints"
+    "Filtering and search endpoints",
+    "Build: expense tracker API on MongoDB (users, expenses, pagination, search)"
   ]},
   { title: "Intermediate — Connecting FastAPI to PostgreSQL", type: "pg", items: [
     "ORM: SQLAlchemy (Core + ORM basics)",
@@ -370,7 +384,10 @@ const DATA = [
     "Full CRUD API on a PostgreSQL table",
     "Relationships: one-to-many, many-to-many",
     "Pagination and filtering with SQL queries",
-    "Transactions and rollback handling"
+    "Transactions and rollback handling",
+    "Avoiding N+1 queries (selectinload, joinedload)",
+    "Async SQLAlchemy 2.0: one session per request",
+    "Build: blog API with users, posts, comments, tags and Alembic migrations"
   ]},
   { title: "Intermediate — FastAPI Deep Dive", type: "fast", items: [
     "Dependency Injection (Depends())",
@@ -382,10 +399,12 @@ const DATA = [
     "Yield dependencies and request lifecycle",
     "Settings management with pydantic-settings",
     "Nested models and validators (field_validator, model_validator)",
-    "Scalable file structure (routers, services, models, core, db)"
+    "Scalable file structure (routers, services, models, core, db)",
+    "Lifespan events (replace deprecated startup/shutdown handlers)",
+    "Generate a typed API client from the OpenAPI schema"
   ]},
   { title: "Intermediate — Authentication & Security", type: "fast", items: [
-    "Password hashing (passlib/bcrypt)",
+    "Password hashing with Argon2 or bcrypt (passlib is no longer maintained; check the current FastAPI docs for recommended libraries)",
     "OAuth2 password flow",
     "JWT tokens: creation, verification, expiry",
     "Storing users securely",
@@ -394,7 +413,9 @@ const DATA = [
     "Refresh tokens and revocation strategy",
     "CORS configuration for frontend integration",
     "Rate limiting (e.g. slowapi)",
-    "Input sanitization and injection prevention"
+    "Input sanitization and injection prevention",
+    "Password reset and email verification flow",
+    "Build: add login, refresh tokens and admin-only routes to the blog API"
   ]},
   { title: "Full Stack — Frontend Integration", type: "fast", items: [
     "Pick a frontend stack (React / Vue / Next.js)",
@@ -405,7 +426,8 @@ const DATA = [
     "Build a full CRUD app end-to-end",
     "File/image upload flow",
     "WebSockets with FastAPI",
-    "Optional: Server-Sent Events (SSE)"
+    "Optional: Server-Sent Events (SSE)",
+    "Build: React or Next.js UI for the blog API with login and protected pages"
   ]},
   { title: "Advanced — Testing & Quality", type: "fast", items: [
     "pytest fundamentals",
@@ -415,7 +437,10 @@ const DATA = [
     "Test coverage tools (pytest-cov)",
     "Linting and formatting: ruff, black, isort",
     "Type checking with mypy",
-    "Pre-commit hooks"
+    "Pre-commit hooks",
+    "Async tests (pytest-asyncio or anyio)",
+    "Test database in Docker (Testcontainers or Compose)",
+    "Build: 80%+ coverage on the blog API, with tests running in CI"
   ]},
   { title: "Advanced — MongoDB Mastery", type: "mongo", items: [
     "Aggregation pipeline ($match, $group, $lookup, $unwind)",
@@ -460,7 +485,8 @@ const DATA = [
     "Structured logging",
     "Monitoring: Prometheus/Grafana or Sentry",
     "Health check endpoints",
-    "Horizontal scaling and load balancing basics"
+    "Horizontal scaling and load balancing basics",
+    "Build: deploy the blog API with Docker Compose and a GitHub Actions pipeline"
   ]},
   { title: "Industry-Ready — Professional Practices", type: "fast", items: [
     "Clean OpenAPI documentation (tags, descriptions)",
@@ -472,9 +498,15 @@ const DATA = [
     "System design interview prep",
     "Database trade-off fluency (relational vs document)",
     "2-3 portfolio-worthy full stack projects",
-    "Contribute to an open-source project"
+    "Contribute to an open-source project",
+    "Capstone: production-style API with auth, Postgres, Redis cache, background jobs, payments, Docker, CI, tests and monitoring, plus README and live demo",
+    "Practice explaining your capstone's design trade-offs out loud"
   ]}
 ];
+
+DATA.forEach((s,i)=>{s.k='s'+i;});
+const EXTRA = [{"k": "n1", "after": "s7", "title": "Intermediate — Real-World Integrations", "type": "fast", "items": ["File storage: S3-compatible uploads with presigned URLs", "Sending email (SMTP or a provider API) from background tasks", "Payments: Razorpay or Stripe checkout and webhook signature verification", "Idempotency keys for payments and retried requests", "Calling third-party APIs with httpx: timeouts, retries, error handling", "Scheduled jobs (cron, APScheduler, Celery beat)", "Build: add a paid plan with webhook-driven status updates to the blog API"]}, {"k": "n2", "after": "s9", "title": "Advanced — Security Hardening", "type": "fast", "items": ["OWASP Top 10 walked through against your own API", "Broken access control and IDOR: test that users cannot read each other's data", "Security headers, secure cookies, SameSite, CSRF when using cookie auth", "Secrets scanning (gitleaks) and never committing .env files", "Dependency audit (pip-audit, Dependabot)", "Upload validation: type, size, storage outside the web root", "Audit logging for sensitive actions", "Login rate limits, account lockout, token revocation"]}, {"k": "n3", "after": "s13", "title": "Advanced — Observability & Reliability", "type": "fast", "items": ["Structured JSON logs with request IDs", "Metrics and tracing with OpenTelemetry", "Error tracking with Sentry and alerts that matter", "Load testing with Locust or k6, then find the bottleneck", "Timeouts, retries with backoff, graceful shutdown", "Finding slow queries (pg_stat_statements, explain)", "Basic SLOs: latency and error-rate targets"]}, {"k": "n4", "after": "n3", "title": "Advanced — AI Features", "type": "fast", "items": ["Call an LLM API from FastAPI with streaming responses (SSE)", "Structured outputs and tool calling validated with Pydantic", "RAG: chunking, embeddings, pgvector or a vector database", "Handling slow calls: timeouts, queues, cancellation", "Per-user rate limits and cost tracking", "Basic evals: test prompts against expected outputs", "Build: add an AI assistant endpoint to the capstone"]}];
+EXTRA.forEach(e=>{const at=DATA.findIndex(s=>s.k===e.after);DATA.splice(at+1,0,e);});
 
 const STORAGE_KEY_STATE = 'fastapi-db-checklist:state';
 const STORAGE_KEY_MODE = 'fastapi-db-checklist:mode';
@@ -509,7 +541,7 @@ DATA.forEach((stage, sIdx) => {
   ul.className = 'items';
 
   stage.items.forEach((text, iIdx) => {
-    const id = `s${sIdx}-i${iIdx}`;
+    const id = `${stage.k}-i${iIdx}`;
     allIds.push(id);
     const li = document.createElement('li');
     li.className = 'item';
@@ -526,10 +558,10 @@ DATA.forEach((stage, sIdx) => {
   wrap.appendChild(section);
   stageEls.push(section);
 
-  head.addEventListener('click', () => {
-    section.classList.toggle('open');
-    body.style.maxHeight = section.classList.contains('open') ? body.scrollHeight + 'px' : '0';
-  });
+  head.setAttribute('role','button'); head.tabIndex = 0; head.setAttribute('aria-expanded','false');
+  const toggle = () => { head.setAttribute('aria-expanded', String(section.classList.toggle('open'))); };
+  head.addEventListener('click', toggle);
+  head.addEventListener('keydown', (e) => { if(e.key==='Enter' || e.key===' '){ e.preventDefault(); toggle(); } });
 });
 
 let checkedSet = new Set();
@@ -631,7 +663,7 @@ function updateCounts(){
   track.innerHTML = '';
 
   DATA.forEach((stage, sIdx) => {
-    const stageDone = stage.items.filter((_, iIdx) => checkedSet.has(`s${sIdx}-i${iIdx}`)).length;
+    const stageDone = stage.items.filter((_, iIdx) => checkedSet.has(`${stage.k}-i${iIdx}`)).length;
     const countEl = document.querySelector(`[data-stage-count="${sIdx}"]`);
     if(countEl){
       countEl.textContent = `${stageDone}/${stage.items.length}`;
@@ -649,6 +681,14 @@ function updateCounts(){
   const pct = totalVisible ? Math.round((doneVisible/totalVisible)*100) : 0;
   document.getElementById('progress-num').innerHTML = `<b>${doneVisible}</b> / ${totalVisible} items \u00B7 ${pct}%`;
   document.getElementById('bar-fill').style.width = pct + '%';
+
+  let nx = '';
+  for(const i of visIdx){
+    const st = DATA[i];
+    const j = st.items.findIndex((_, x) => !checkedSet.has(`${st.k}-i${x}`));
+    if(j >= 0){ nx = `<b>Next up:</b> ${st.items[j]} <span style="color:var(--text-faint)">(${st.title})</span>`; break; }
+  }
+  document.getElementById('next').innerHTML = nx || '<b>All items done.</b> Ship the capstone.';
 }
 
 function persist(){
@@ -698,15 +738,14 @@ document.getElementById('expand-all').addEventListener('click', () => {
   stageEls.forEach(s => {
     if(s.classList.contains('hidden')) return;
     s.classList.add('open');
-    const body = s.querySelector('.stage-body');
-    body.style.maxHeight = body.scrollHeight + 'px';
+    s.querySelector('.stage-head').setAttribute('aria-expanded','true');
   });
 });
 
 document.getElementById('collapse-all').addEventListener('click', () => {
   stageEls.forEach(s => {
     s.classList.remove('open');
-    s.querySelector('.stage-body').style.maxHeight = '0';
+    s.querySelector('.stage-head').setAttribute('aria-expanded','false');
   });
 });
 
@@ -715,6 +754,36 @@ document.getElementById('reset-all').addEventListener('click', () => {
   checkedSet = new Set();
   applyState();
   persist();
+});
+
+document.getElementById('hide-done').addEventListener('click', (e) => {
+  const on = wrap.classList.toggle('hide-done');
+  e.target.textContent = on ? 'Show done' : 'Hide done';
+});
+
+document.getElementById('export').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify({mode: currentMode, checked: Array.from(checkedSet)}, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'fastapi-progress.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+document.getElementById('import').addEventListener('click', () => document.getElementById('import-file').click());
+document.getElementById('import-file').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if(!f) return;
+  f.text().then(t => {
+    try{
+      const d = JSON.parse(t);
+      if(!Array.isArray(d.checked)) throw new Error('bad file');
+      checkedSet = new Set(d.checked.filter(x => allIds.includes(x)));
+      if(['mongo','pg','both'].includes(d.mode)) currentMode = d.mode;
+      applyState(); applyMode(); persist(); persistMode();
+    }catch(err){ showToast('Not a valid progress file', true); }
+  });
+  e.target.value = '';
 });
 
 loadState();
